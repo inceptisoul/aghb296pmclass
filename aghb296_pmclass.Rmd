@@ -1,0 +1,86 @@
+---
+title: "AgHb296_PMClass"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+library(rgdal)
+library(leaflet)
+setwd("C:\\Users\\gregory.paesl\\Documents\\ArcGIS\\Projects\\AG_HB296_PM_map\\AG_HB296_PM_map.gdb")
+#read shapefile and store as variable
+pm_class <- readOGR(
+     dsn = paste0(getwd()),
+     layer = "leaflet_aghb296_pmclass",
+     verbose = FALSE
+   )
+
+#Clean the data object (my_spdf)
+
+#library(dplyr)
+#my_spdf@data$ORIG_FID[ which(my_spdf$ORIG_FID )] #change ORIG_FID value to something else
+#library(htmltools)
+
+#prepare text for the tooltips
+mytext <- paste(
+  "Rock Description: ", pm_class@data$ROCKDESC, "<br/>",
+  "Rock Type: ", pm_class@data$ROCK, "<br/>",
+  "Ag Handbook 296 Class: ", pm_class@data$Updated_class, "<br/>",
+  sep="") %>%
+  lapply(htmltools::HTML)
+
+
+#project the shp to WGS84 to fit in leaflet? 
+pmclass_latlong <- spTransform(pm_class, CRS("+proj=longlat +datum=WGS84"))
+
+#create color palette for categorical attributes
+mypal_update <- palette(c("khaki1","darkorange2","goldenrod4", "turquoise3", "yellow2", "hotpink1", "blue", "gray36", "black", "white", "gray76"))
+
+final_pal <- colorFactor(
+  palette = mypal_update,
+  domain = pmclass_latlong@data$Updated_class
+)
+
+
+
+#prepare final map
+m <- leaflet(pmclass_latlong) %>%
+  addProviderTiles(providers$Stamen.Terrain) %>%
+  setView(lng = -98.6, lat = 39.8, zoom = 4.4) %>%
+  addPolygons(
+    fillColor = ~final_pal(Updated_class),
+    stroke = TRUE,
+    opacity = 0.25,
+    fillOpacity = 0.9,
+    color = "black",
+    weight = 0.3,
+    label = mytext,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "13px",
+      direction = "auto"
+    )
+  ) %>%
+  addLegend(pal = final_pal, opacity = 0.9, title = "Ag Handbook 296<br>Parent Material Classes", position = "bottomleft", values = ~Updated_class)
+
+m
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
